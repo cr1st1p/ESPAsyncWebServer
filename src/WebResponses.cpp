@@ -22,6 +22,37 @@
 #include "WebResponseImpl.h"
 #include "cbuf.h"
 
+#define DEBUG
+
+
+#ifdef DEBUG
+#define DBG(format, ...) os_printf(format, __VA_ARGS__)
+
+const char* DBG_STATE(WebResponseState state) {
+	switch(state) {
+		case RESPONSE_SETUP: return "RESPONSE_SETUP";
+		case RESPONSE_HEADERS: return "RESPONSE_HEADERS";
+		case RESPONSE_CONTENT: return "RESPONSE_CONTENT";
+		case RESPONSE_WAIT_ACK: return "RESPONSE_WAIT_ACK";
+		case RESPONSE_END: return "RESPONSE_END";
+		case RESPONSE_FAILED: return "RESPONSE_FAILED";
+	}
+	return "UNKNOWN?!";
+}
+
+#define DBG_STATE(where, format, ...) \
+	DBG("%s: state=%s client=%p url=%s " format, where, _state, request->client(), request->url(), __VA_ARGS__)
+
+
+#else
+#define DBG(format, ...) (void)
+#define DBG_STATE(where, format, ...) (void)
+#endif
+
+
+
+
+
 // Since ESP8266 does not link memchr by default, here's its implementation.
 void* memchr(void* ptr, int ch, size_t count)
 {
@@ -261,6 +292,8 @@ void AsyncAbstractResponse::_respond(AsyncWebServerRequest *request){
 }
 
 size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, uint32_t time){
+	DBG_STATE("AsyncAbstractResponse::_ack", "len=%d\n", len);
+
   if(!_sourceValid()){
     _state = RESPONSE_FAILED;
     request->client()->close();
