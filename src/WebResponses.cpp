@@ -41,7 +41,7 @@ const char* DBG_STATE(WebResponseState state) {
 }
 
 #define DBG_STATE(where, format, ...) \
-	DBG("%s: state=%s client=%p url=%s " format, where, _state, request->client(), request->url().c_str(), __VA_ARGS__)
+	DBG("%s: state=%s client=%p url=%s " format, where, DBG_STATE(_state), request->client(), request->url().c_str(), __VA_ARGS__)
 
 
 #else
