@@ -42,7 +42,8 @@ const char* DBG_STATE(WebResponseState state) {
 
 // DBG_AsyncAbtractResponse (mostly in _ack() )
 #define DBG_AAR(where, format, ...) \
-	DBG("%s: state=%s client=%p url=%s " format, where, DBG_STATE(_state), request->client(), request->url().c_str(), __VA_ARGS__)
+	DBG("%s: state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
+			ESP.getFreeHeap(), request->client(), request->url().c_str(), __VA_ARGS__)
 
 
 #else
@@ -338,13 +339,12 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     uint8_t *buf = (uint8_t *)malloc(outLen+headLen);
     DBG_AAR("AsyncAbstractResponse::_ack:s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
     if (!buf) {
-      DBG_AAR("AsyncAbstractResponse::_ack:s3", "OOPS. Out of memory?! Returing\n", "");
+      DBG_AAR("AsyncAbstractResponse::_ack:s3", "OOPS. Out of memory?! Returning\n", "");
       return 0;
     }
 
     if(headLen){
-      //TODO: memcpy should be faster?
-      sprintf((char*)buf, "%s", _head.c_str());
+      memcpy(buf, _head.c_str(), _head.length());
       _head = String();
     }
 
@@ -369,6 +369,14 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
       size_t w = request->client()->write((const char*)buf, outLen);
       _writtenLength += w;
       DBG_AAR("AsyncAbstractResponse::_ack:s4", "outLen=%d w=%d _writtenLength=%d\n",  outLen, w, _writtenLength);
+      if (w < outLen) {
+          // TODO: if w < outLen, we're screwed for now. Code is not created to cope with this situation (like low memory)
+          // we should just close the connection....
+    	  _state = RESPONSE_END;
+    	  DBG_AAR("AsyncAbstractResponse::_ack:s4", "out of luck! We couldn't write data - probably out of memory. Closing connection", "");
+    	  request->client()->close(true);
+    	  return 0;
+      }
     }
 
     if(_chunked)
@@ -389,7 +397,8 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
 			(_sendContentLength? 'y':'n'), _ackedLength, _writtenLength);
     if(!_sendContentLength || _ackedLength >= _writtenLength){
       _state = RESPONSE_END;
-      if(!_chunked && !_sendContentLength) {
+      // Since we're sending the 'Connection: close' header, let's also close the connection once we've written the content.
+      if(!_chunked && (!_sendContentLength || (_writtenLength >= _contentLength))) {
         request->client()->close(true);
         DBG_AAR("AsyncAbstractResponse::_ack:s4", "closing connection\n", "");
       } else {
