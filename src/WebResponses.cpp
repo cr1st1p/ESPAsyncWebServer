@@ -40,13 +40,14 @@ const char* DBG_STATE(WebResponseState state) {
 	return "UNKNOWN?!";
 }
 
-#define DBG_STATE(where, format, ...) \
+// DBG_AsyncAbtractResponse (mostly in _ack() )
+#define DBG_AAR(where, format, ...) \
 	DBG("%s: state=%s client=%p url=%s " format, where, DBG_STATE(_state), request->client(), request->url().c_str(), __VA_ARGS__)
 
 
 #else
 #define DBG(format, ...) (void)
-#define DBG_STATE(where, format, ...) (void)
+#define DBG_AAR(where, format, ...) (void)
 #endif
 
 
@@ -292,7 +293,7 @@ void AsyncAbstractResponse::_respond(AsyncWebServerRequest *request){
 }
 
 size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, uint32_t time){
-	DBG_STATE("AsyncAbstractResponse::_ack:start", "len=%d\n", len);
+	DBG_AAR("AsyncAbstractResponse::_ack:start", "len=%d\n", len);
 
   if(!_sourceValid()){
     _state = RESPONSE_FAILED;
@@ -304,19 +305,19 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
 
   size_t headLen = _head.length();
 
-  DBG_STATE("AsyncAbstractResponse::_ack:s1", "headLen=%d space=%d\n", headLen, space);
+  DBG_AAR("AsyncAbstractResponse::_ack:s1", "headLen=%d space=%d\n", headLen, space);
   if(_state == RESPONSE_HEADERS){
     if(space >= headLen){
       _state = RESPONSE_CONTENT;
       space -= headLen;
     } else {
       // TODO: This is not good in 2 ways (memory and error checking)
-      BG_STATE("AsyncAbstractResponse::_ack:s2", "space=%d\n", space);
+      DBG_AAR("AsyncAbstractResponse::_ack:s2", "space=%d\n", space);
       String out = _head.substring(0, space);
       _head = _head.substring(space);
       size_t w = request->client()->write(out.c_str(), out.length());
       _writtenLength += w;
-      DBG_STATE("AsyncAbstractResponse::_ack:s2", "written=%d out of %d\n", w, out.length());
+      DBG_AAR("AsyncAbstractResponse::_ack:s2", "written=%d out of %d\n", w, out.length());
       return out.length();
     }
   }
@@ -335,9 +336,9 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     }
 
     uint8_t *buf = (uint8_t *)malloc(outLen+headLen);
-    DBG_STATE("AsyncAbstractResponse::_ack:s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
+    DBG_AAR("AsyncAbstractResponse::_ack:s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
     if (!buf) {
-      DBG_STATE("AsyncAbstractResponse::_ack:s3", "OOPS. Out of memory?! Returing\n");
+      DBG_AAR("AsyncAbstractResponse::_ack:s3", "OOPS. Out of memory?! Returing\n", "");
       return 0;
     }
 
@@ -367,7 +368,7 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     if(outLen) {
       size_t w = request->client()->write((const char*)buf, outLen);
       _writtenLength += w;
-      DBG_STATE("AsyncAbstractResponse::_ack:s4", "outLen=%d w=%d _writtenLength=%d\n",  outLen, w, _writtenLength);
+      DBG_AAR("AsyncAbstractResponse::_ack:s4", "outLen=%d w=%d _writtenLength=%d\n",  outLen, w, _writtenLength);
     }
 
     if(_chunked)
@@ -379,24 +380,24 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
 
     if((_chunked && readLen == 0) || (!_sendContentLength && outLen == 0) || (!_chunked && _sentLength == _contentLength)){
       _state = RESPONSE_WAIT_ACK;
-      DBG_STATE("AsyncAbstractResponse::_ack:switched to WAIT_ACK", "\n");
+      DBG_AAR("AsyncAbstractResponse::_ack:switched to WAIT_ACK", "\n", "");
     }
     return outLen;
 
   } else if(_state == RESPONSE_WAIT_ACK){
-	DBG_STATE("AsyncAbstractResponse::_ack:s4", "_sendContentLength:%c _ackedLength=%d _writtenLengh=%d\n",
-			(_sendContentLength? 'y':'n'), _ackedLength, _writtenLengh);
+	DBG_AAR("AsyncAbstractResponse::_ack:s4", "_sendContentLength:%c _ackedLength=%d _writtenLengh=%d\n",
+			(_sendContentLength? 'y':'n'), _ackedLength, _writtenLength);
     if(!_sendContentLength || _ackedLength >= _writtenLength){
       _state = RESPONSE_END;
       if(!_chunked && !_sendContentLength) {
         request->client()->close(true);
-        DBG_STATE("AsyncAbstractResponse::_ack:s4", "closing connection\n");
+        DBG_AAR("AsyncAbstractResponse::_ack:s4", "closing connection\n", "");
       } else {
-    	DBG_STATE("AsyncAbstractResponse::_ack:s4", "NOT closing connection\n");
+    	DBG_AAR("AsyncAbstractResponse::_ack:s4", "NOT closing connection\n", "");
       }
     }
   }
-  DBG_STATE("AsyncAbstractResponse::_ack:ret0", "\n");
+  DBG_AAR("AsyncAbstractResponse::_ack:ret0", "\n", "");
   return 0;
 }
 
@@ -418,7 +419,7 @@ size_t AsyncAbstractResponse::_fillBufferAndProcessTemplates(uint8_t* data, size
 {
   if(!_callback) {
 	  size_t r = _fillBuffer(data, len);
-	  DBG_STATE("AsyncAbstractResponse::_fillBufferAndProcessTemplates", "len To Read=%d read:\n", len, r);
+	  DBG("AsyncAbstractResponse::_fillBufferAndProcessTemplates: state=%s toRead=%d read:%d\n", DBG_STATE(_state), len, r);
 
       return r;
   }
