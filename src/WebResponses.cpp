@@ -292,7 +292,7 @@ void AsyncAbstractResponse::_respond(AsyncWebServerRequest *request){
 }
 
 size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, uint32_t time){
-	DBG_STATE("AsyncAbstractResponse::_ack", "len=%d\n", len);
+	DBG_STATE("AsyncAbstractResponse::_ack:start", "len=%d\n", len);
 
   if(!_sourceValid()){
     _state = RESPONSE_FAILED;
@@ -303,14 +303,20 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
   size_t space = request->client()->space();
 
   size_t headLen = _head.length();
+
+  DBG_STATE("AsyncAbstractResponse::_ack:s1", "headLen=%d space=%d\n", headLen, space);
   if(_state == RESPONSE_HEADERS){
     if(space >= headLen){
       _state = RESPONSE_CONTENT;
       space -= headLen;
     } else {
+      // TODO: This is not good in 2 ways (memory and error checking)
+      BG_STATE("AsyncAbstractResponse::_ack:s2", "space=%d\n", space);
       String out = _head.substring(0, space);
       _head = _head.substring(space);
-      _writtenLength += request->client()->write(out.c_str(), out.length());
+      size_t w = request->client()->write(out.c_str(), out.length());
+      _writtenLength += w;
+      DBG_STATE("AsyncAbstractResponse::_ack:s2", "written=%d out of %d\n", w, out.length());
       return out.length();
     }
   }
@@ -329,8 +335,9 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     }
 
     uint8_t *buf = (uint8_t *)malloc(outLen+headLen);
+    DBG_STATE("AsyncAbstractResponse::_ack:s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
     if (!buf) {
-      // os_printf("_ack malloc %d failed\n", outLen+headLen);
+      DBG_STATE("AsyncAbstractResponse::_ack:s3", "OOPS. Out of memory?! Returing\n");
       return 0;
     }
 
@@ -357,8 +364,11 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
       outLen = _fillBufferAndProcessTemplates(buf+headLen, outLen) + headLen;
     }
 
-    if(outLen)
-      _writtenLength += request->client()->write((const char*)buf, outLen);
+    if(outLen) {
+      size_t w = request->client()->write((const char*)buf, outLen);
+      _writtenLength += w;
+      DBG_STATE("AsyncAbstractResponse::_ack:s4", "outLen=%d w=%d _writtenLength=%d\n",  outLen, w, _writtenLength);
+    }
 
     if(_chunked)
       _sentLength += readLen;
@@ -369,16 +379,24 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
 
     if((_chunked && readLen == 0) || (!_sendContentLength && outLen == 0) || (!_chunked && _sentLength == _contentLength)){
       _state = RESPONSE_WAIT_ACK;
+      DBG_STATE("AsyncAbstractResponse::_ack:switched to WAIT_ACK", "\n");
     }
     return outLen;
 
   } else if(_state == RESPONSE_WAIT_ACK){
+	DBG_STATE("AsyncAbstractResponse::_ack:s4", "_sendContentLength:%c _ackedLength=%d _writtenLengh=%d\n",
+			(_sendContentLength? 'y':'n'), _ackedLength, _writtenLengh);
     if(!_sendContentLength || _ackedLength >= _writtenLength){
       _state = RESPONSE_END;
-      if(!_chunked && !_sendContentLength)
+      if(!_chunked && !_sendContentLength) {
         request->client()->close(true);
+        DBG_STATE("AsyncAbstractResponse::_ack:s4", "closing connection\n");
+      } else {
+    	DBG_STATE("AsyncAbstractResponse::_ack:s4", "NOT closing connection\n");
+      }
     }
   }
+  DBG_STATE("AsyncAbstractResponse::_ack:ret0", "\n");
   return 0;
 }
 
@@ -398,8 +416,12 @@ size_t AsyncAbstractResponse::_readDataFromCacheOrContent(uint8_t* data, const s
 
 size_t AsyncAbstractResponse::_fillBufferAndProcessTemplates(uint8_t* data, size_t len)
 {
-  if(!_callback)
-    return _fillBuffer(data, len);
+  if(!_callback) {
+	  size_t r = _fillBuffer(data, len);
+	  DBG_STATE("AsyncAbstractResponse::_fillBufferAndProcessTemplates", "len To Read=%d read:\n", len, r);
+
+      return r;
+  }
 
   const size_t originalLen = len;
   len = _readDataFromCacheOrContent(data, len);
