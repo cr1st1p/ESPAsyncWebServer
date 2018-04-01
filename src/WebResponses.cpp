@@ -297,10 +297,9 @@ size_t AsyncBasicResponse::_ack(AsyncWebServerRequest *request, size_t len, uint
 	DBG_ABR("p2", "_ackedLength=%d _writtenLength=%d\n\n", _ackedLength, _writtenLength);
     if(_ackedLength >= _writtenLength){
       _state = RESPONSE_END;
-    }
-  } else if (_state == RESPONSE_END) {
 	  // since we are automatically sending also connection:close
 	  request->client()->close(true);
+    }
   }
   DBG_ABR("ret", "\n", "");
   return 0;
