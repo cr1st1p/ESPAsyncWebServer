@@ -40,9 +40,18 @@ const char* DBG_STATE(WebResponseState state) {
 	return "UNKNOWN?!";
 }
 
-// DBG_AsyncAbtractResponse (mostly in _ack() )
+// DBG_AAR (Async Abtract Response)
 #define DBG_AAR(where, format, ...) \
-	DBG("%s: state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
+	DBG("AsyncAbtractResponse::_ack():%s state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
+			ESP.getFreeHeap(), request->client(), request->url().c_str(), __VA_ARGS__)
+
+// DBG_AAR (Async Basic Response)
+#define DBG_ABR(where, format, ...) \
+	DBG("AsyncBasicResponse::_ack():%s state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
+			ESP.getFreeHeap(), request->client(), request->url().c_str(), __VA_ARGS__)
+
+#define DBG_ABR_R(where, format, ...) \
+	DBG("AsyncBasicResponse::_respond():%s state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
 			ESP.getFreeHeap(), request->client(), request->url().c_str(), __VA_ARGS__)
 
 
@@ -216,19 +225,28 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
   String out = _assembleHead(request->version());
   size_t outLen = out.length();
   size_t space = request->client()->space();
+
+  DBG_ABR_R("start", "outLen=%d, space=%d _contentLength=%d\n", outLen, space, _contentLength);
+
   if(!_contentLength && space >= outLen){
-    _writtenLength += request->client()->write(out.c_str(), outLen);
+	size_t w = request->client()->write(out.c_str(), outLen);
+    _writtenLength += w;
+    DBG_ABR_R("p1", "wrote=%d. Just headers. Will switch to ACK\n", w);
     _state = RESPONSE_WAIT_ACK;
   } else if(_contentLength && space >= outLen + _contentLength){
     out += _content;
     outLen += _contentLength;
-    _writtenLength += request->client()->write(out.c_str(), outLen);
+    size_t w = request->client()->write(out.c_str(), outLen);
+    _writtenLength += w;
+    DBG_ABR_R("p2", "wrote=%d. _writtenLength=%d. Will switch to ACK\n", w, _writtenLength);
     _state = RESPONSE_WAIT_ACK;
   } else if(space && space < outLen){
     String partial = out.substring(0, space);
     _content = out.substring(space) + _content;
     _contentLength += outLen - space;
-    _writtenLength += request->client()->write(partial.c_str(), partial.length());
+    size_t w = request->client()->write(partial.c_str(), partial.length());
+    _writtenLength += w;
+    DBG_ABR_R("p3", "wrote=%d. _writtenLength=%d. Will switch to RESPONSE_CONTENT\n", w, _writtenLength);
     _state = RESPONSE_CONTENT;
   } else if(space > outLen && space < (outLen + _contentLength)){
     size_t shift = space - outLen;
@@ -236,9 +254,12 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
     _sentLength += shift;
     out += _content.substring(0, shift);
     _content = _content.substring(shift);
-    _writtenLength += request->client()->write(out.c_str(), outLen);
+    size_t w = request->client()->write(out.c_str(), outLen);
+    _writtenLength += w;
+    DBG_ABR_R("p4", "wrote=%d. _writtenLength=%d. Will switch to RESPONSE_CONTENT\n", w, _writtenLength);
     _state = RESPONSE_CONTENT;
   } else {
+	DBG_ABR_R("p5", "Just switching to RESPONSE_CONTENT\n");
     _content = out + _content;
     _contentLength += outLen;
     _state = RESPONSE_CONTENT;
@@ -246,14 +267,19 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
 }
 
 size_t AsyncBasicResponse::_ack(AsyncWebServerRequest *request, size_t len, uint32_t time){
+   DBG_ABR("start", "len=%d\n", len);
+
   _ackedLength += len;
   if(_state == RESPONSE_CONTENT){
     size_t available = _contentLength - _sentLength;
     size_t space = request->client()->space();
+    DBG_ABR("p1", "available=%d space=%d\n", available, space);
     //we can fit in this packet
     if(space > available){
-      _writtenLength += request->client()->write(_content.c_str(), available);
+      size_t w = request->client()->write(_content.c_str(), available);
+      _writtenLength += w;
       _content = String();
+      DBG_ABR("p1.5", "written=%d, writtenLength=%d will switch to WAIT_ACK\n", w, _writtenLength);
       _state = RESPONSE_WAIT_ACK;
       return available;
     }
@@ -261,13 +287,17 @@ size_t AsyncBasicResponse::_ack(AsyncWebServerRequest *request, size_t len, uint
     String out = _content.substring(0, space);
     _content = _content.substring(space);
     _sentLength += space;
-    _writtenLength += request->client()->write(out.c_str(), space);
+    size_t w = request->client()->write(out.c_str(), space);
+    _writtenLength += w;
+    DBG_ABR("p1.7", "written=%d, writtenLength=%d will switch to WAIT_ACK\n", w, _writtenLength);
     return space;
   } else if(_state == RESPONSE_WAIT_ACK){
+	DBG_ABR("p2", "_ackedLength=%d _writtenLength=%d\n\n", _ackedLength, _writtenLength);
     if(_ackedLength >= _writtenLength){
       _state = RESPONSE_END;
     }
   }
+  DBG_ABR("ret", "", "");
   return 0;
 }
 
@@ -294,7 +324,7 @@ void AsyncAbstractResponse::_respond(AsyncWebServerRequest *request){
 }
 
 size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, uint32_t time){
-	DBG_AAR("AsyncAbstractResponse::_ack:start", "len=%d\n", len);
+	DBG_AAR("start", "len=%d\n", len);
 
   if(!_sourceValid()){
     _state = RESPONSE_FAILED;
@@ -306,19 +336,19 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
 
   size_t headLen = _head.length();
 
-  DBG_AAR("AsyncAbstractResponse::_ack:s1", "headLen=%d space=%d\n", headLen, space);
+  DBG_AAR("s1", "headLen=%d space=%d\n", headLen, space);
   if(_state == RESPONSE_HEADERS){
     if(space >= headLen){
       _state = RESPONSE_CONTENT;
       space -= headLen;
     } else {
       // TODO: This is not good in 2 ways (memory and error checking)
-      DBG_AAR("AsyncAbstractResponse::_ack:s2", "space=%d\n", space);
+      DBG_AAR("s2", "space=%d\n", space);
       String out = _head.substring(0, space);
       _head = _head.substring(space);
       size_t w = request->client()->write(out.c_str(), out.length());
       _writtenLength += w;
-      DBG_AAR("AsyncAbstractResponse::_ack:s2", "written=%d out of %d\n", w, out.length());
+      DBG_AAR("s2", "written=%d out of %d\n", w, out.length());
       return out.length();
     }
   }
@@ -337,9 +367,9 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     }
 
     uint8_t *buf = (uint8_t *)malloc(outLen+headLen);
-    DBG_AAR("AsyncAbstractResponse::_ack:s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
+    DBG_AAR("s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
     if (!buf) {
-      DBG_AAR("AsyncAbstractResponse::_ack:s3", "OOPS. Out of memory?! Returning\n", "");
+      DBG_AAR("s3", "OOPS. Out of memory?! Returning\n", "");
       return 0;
     }
 
@@ -368,12 +398,12 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     if(outLen) {
       size_t w = request->client()->write((const char*)buf, outLen);
       _writtenLength += w;
-      DBG_AAR("AsyncAbstractResponse::_ack:s4", "outLen=%d w=%d _writtenLength=%d\n",  outLen, w, _writtenLength);
+      DBG_AAR("s4", "outLen=%d w=%d _writtenLength=%d\n",  outLen, w, _writtenLength);
       if (w < outLen) {
           // TODO: if w < outLen, we're screwed for now. Code is not created to cope with this situation (like low memory)
           // we should just close the connection....
     	  _state = RESPONSE_END;
-    	  DBG_AAR("AsyncAbstractResponse::_ack:s4", "out of luck! We couldn't write data - probably out of memory. Closing connection", "");
+    	  DBG_AAR("s4", "out of luck! We couldn't write data - probably out of memory. Closing connection", "");
     	  request->client()->close(true);
     	  return 0;
       }
@@ -388,25 +418,25 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
 
     if((_chunked && readLen == 0) || (!_sendContentLength && outLen == 0) || (!_chunked && _sentLength == _contentLength)){
       _state = RESPONSE_WAIT_ACK;
-      DBG_AAR("AsyncAbstractResponse::_ack:switched to WAIT_ACK", "\n", "");
+      DBG_AAR("switched to WAIT_ACK", "\n", "");
     }
     return outLen;
 
   } else if(_state == RESPONSE_WAIT_ACK){
-	DBG_AAR("AsyncAbstractResponse::_ack:s4", "_sendContentLength:%c _ackedLength=%d _writtenLengh=%d\n",
+	DBG_AAR("s4", "_sendContentLength:%c _ackedLength=%d _writtenLengh=%d\n",
 			(_sendContentLength? 'y':'n'), _ackedLength, _writtenLength);
     if(!_sendContentLength || _ackedLength >= _writtenLength){
       _state = RESPONSE_END;
       // Since we're sending the 'Connection: close' header, let's also close the connection once we've written the content.
       if(!_chunked && (!_sendContentLength || (_writtenLength >= _contentLength))) {
         request->client()->close(true);
-        DBG_AAR("AsyncAbstractResponse::_ack:s4", "closing connection\n", "");
+        DBG_AAR("s4", "closing connection\n", "");
       } else {
-    	DBG_AAR("AsyncAbstractResponse::_ack:s4", "NOT closing connection\n", "");
+    	DBG_AAR("s4", "NOT closing connection\n", "");
       }
     }
   }
-  DBG_AAR("AsyncAbstractResponse::_ack:ret0", "\n", "");
+  DBG_AAR("ret0", "\n", "");
   return 0;
 }
 
