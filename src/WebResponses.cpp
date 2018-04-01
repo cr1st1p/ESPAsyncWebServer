@@ -259,7 +259,7 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
     DBG_ABR_R("p4", "wrote=%d. _writtenLength=%d. Will switch to RESPONSE_CONTENT\n", w, _writtenLength);
     _state = RESPONSE_CONTENT;
   } else {
-	DBG_ABR_R("p5", "Just switching to RESPONSE_CONTENT\n");
+	DBG_ABR_R("p5", "Just switching to RESPONSE_CONTENT\n", "");
     _content = out + _content;
     _contentLength += outLen;
     _state = RESPONSE_CONTENT;
@@ -296,8 +296,11 @@ size_t AsyncBasicResponse::_ack(AsyncWebServerRequest *request, size_t len, uint
     if(_ackedLength >= _writtenLength){
       _state = RESPONSE_END;
     }
+  } else if (_state == RESPONSE_END) {
+	  // since we are automatically sending also connection:close
+	  request->client()->close(true);
   }
-  DBG_ABR("ret", "", "");
+  DBG_ABR("ret", "\n", "");
   return 0;
 }
 
