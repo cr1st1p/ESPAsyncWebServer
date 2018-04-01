@@ -58,6 +58,8 @@ const char* DBG_STATE(WebResponseState state) {
 #else
 #define DBG(format, ...) (void)
 #define DBG_AAR(where, format, ...) (void)
+#define DBG_ABR(where, format, ...) (void)
+#define DBG_ABR_R(where, format, ...) (void)
 #endif
 
 
