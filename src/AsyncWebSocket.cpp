@@ -1105,12 +1105,12 @@ void AsyncWebSocket::handleRequest(AsyncWebServerRequest *request){
   AsyncWebHeader* version = request->getHeader(WS_STR_VERSION);
   if(version->value().toInt() != 13){
     AsyncWebServerResponse *response = request->beginResponse(400);
-    response->addHeader(WS_STR_VERSION,"13");
+    response->addHeader(WS_STR_VERSION, F("13"));
     request->send(response);
     return;
   }
   AsyncWebHeader* key = request->getHeader(WS_STR_KEY);
-  AsyncWebServerResponse *response = new AsyncWebSocketResponse(key->value(), this);
+  AsyncWebServerResponse *response = new AsyncWebSocketResponse(key->value().asString(), this);
   if(request->hasHeader(WS_STR_PROTOCOL)){
     AsyncWebHeader* protocol = request->getHeader(WS_STR_PROTOCOL);
     //ToDo: check protocol
@@ -1183,7 +1183,7 @@ AsyncWebSocketResponse::AsyncWebSocketResponse(const String& key, AsyncWebSocket
   int len = base64_encode_block((const char *) hash, 20, buffer, &_state);
   len = base64_encode_blockend((buffer + len), &_state);
   addHeader(WS_STR_CONNECTION, WS_STR_UPGRADE);
-  addHeader(WS_STR_UPGRADE, "websocket");
+  addHeader(WS_STR_UPGRADE, F("websocket"));
   addHeader(WS_STR_ACCEPT,buffer);
   free(buffer);
   free(hash);

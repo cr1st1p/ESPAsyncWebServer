@@ -157,7 +157,7 @@ AsyncEventSourceClient::AsyncEventSourceClient(AsyncWebServerRequest *request, A
   _server = server;
   _lastId = 0;
   if(request->hasHeader("Last-Event-ID"))
-    _lastId = atoi(request->getHeader("Last-Event-ID")->value().c_str());
+    _lastId = request->getHeader("Last-Event-ID")->value().atoi();
     
   _client->setRxTimeout(0);
   _client->onError(NULL, NULL);
@@ -326,8 +326,8 @@ AsyncEventSourceResponse::AsyncEventSourceResponse(AsyncEventSource *server){
   _code = 200;
   _contentType = "text/event-stream";
   _sendContentLength = false;
-  addHeader("Cache-Control", "no-cache");
-  addHeader("Connection","keep-alive");
+  addHeader(F("Cache-Control"), F("no-cache"));
+  addHeader(F("Connection"), F("keep-alive"));
 }
 
 void AsyncEventSourceResponse::_respond(AsyncWebServerRequest *request){

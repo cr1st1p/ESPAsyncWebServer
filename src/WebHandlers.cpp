@@ -195,7 +195,7 @@ void AsyncStaticWebHandler::handleRequest(AsyncWebServerRequest *request)
 
   if (request->_tempFile == true) {
     String etag = String(request->_tempFile.size());
-    if (_last_modified.length() && _last_modified == request->header(F("If-Modified-Since"))) {
+    if (_last_modified.length() && request->header(F("If-Modified-Since")) == _last_modified) {
       request->_tempFile.close();
       request->send(304); // Not modified
     } else if (_cache_control.length() && request->hasHeader(F("If-None-Match")) && request->header(F("If-None-Match")).equals(etag)) {

@@ -489,8 +489,8 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request){
         request->send(304);
       } else {
         AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", edit_htm_gz, edit_htm_gz_len);
-        response->addHeader("Content-Encoding", "gzip");
-        response->addHeader("Last-Modified", buildTime);
+        response->addHeader(F("Content-Encoding"), F("gzip"));
+        response->addHeader(F("Last-Modified"), buildTime);
         request->send(response);
       }
     }

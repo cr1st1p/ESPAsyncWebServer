@@ -64,6 +64,52 @@ typedef enum {
 typedef uint8_t WebRequestMethodComposite;
 typedef std::function<void(void)> ArDisconnectHandler;
 
+
+class LightString {
+public:
+	typedef const __FlashStringHelper* FlashString ;
+	typedef PGM_P FlashStringStorage;
+
+private:
+	union {
+		FlashStringStorage flashString;
+		String string;
+	};
+	enum Type {FLASH, STRING};
+	uint8_t type; // enum per-se is taking 8 bytes
+
+
+public:
+
+	LightString(FlashString s = nullptr);
+	LightString(const String& s);
+	LightString(const LightString& s);
+	LightString(const char* s);
+
+	~LightString();
+
+	void changeToStringType();
+	String asString() const;
+
+	LightString& operator=(const String& rhs);
+
+	int atoi() const;
+	long toInt(void) const;
+	unsigned char equalsIgnoreCase(const String &s) const;
+    unsigned char equals(const char *cstr) const;
+    unsigned char equals(const String& s) const {
+    	return equals(s.c_str());
+    }
+    unsigned char operator ==(const String &rhs) const {
+    	return equals(rhs.c_str());
+    }
+
+    void appendTo(String& dest) const;
+
+};
+
+
+
 /*
  * PARAMETER :: Chainable object to hold GET/POST and FILE parameters
  * */
@@ -92,10 +138,11 @@ class AsyncWebParameter {
 
 class AsyncWebHeader {
   private:
-    String _name;
-    String _value;
+	LightString _name;
+	LightString _value;
 
   public:
+    AsyncWebHeader(const LightString& name, const LightString& value): _name(name), _value(value){}
     AsyncWebHeader(const String& name, const String& value): _name(name), _value(value){}
     AsyncWebHeader(const String& data): _name(), _value(){
       if(!data) return;
@@ -105,9 +152,9 @@ class AsyncWebHeader {
       _value = data.substring(index + 2);
     }
     ~AsyncWebHeader(){}
-    const String& name() const { return _name; }
-    const String& value() const { return _value; }
-    String toString() const { return String(_name+": "+_value+"\r\n"); }
+    const LightString& name() const { return _name; }
+    const LightString& value() const { return _value; }
+    String toString() const { return _name.asString() + ": " + _value.asString() + "\r\n"; }
 };
 
 /*
@@ -262,10 +309,10 @@ class AsyncWebServerRequest {
     bool hasArg(const char* name) const;         // check if argument exists
     bool hasArg(const __FlashStringHelper * data) const;         // check if F(argument) exists
 
-    const String& header(const char* name) const;// get request header value by name
-    const String& header(const __FlashStringHelper * data) const;// get request header value by F(name)    
-    const String& header(size_t i) const;        // get request header value by number
-    const String& headerName(size_t i) const;    // get request header name by number
+    const LightString& header(const char* name) const;// get request header value by name
+    const LightString& header(const __FlashStringHelper * data) const;// get request header value by F(name)
+    const LightString& header(size_t i) const;        // get request header value by number
+    const LightString& headerName(size_t i) const;    // get request header name by number
     String urlDecode(const String& text) const;
 };
 
@@ -357,7 +404,7 @@ class AsyncWebServerResponse {
     virtual void setCode(int code);
     virtual void setContentLength(size_t len);
     virtual void setContentType(const String& type);
-    virtual void addHeader(const String& name, const String& value);
+    virtual void addHeader(const LightString& name, const LightString& value);
     virtual String _assembleHead(uint8_t version);
     virtual bool _started() const;
     virtual bool _finished() const;
