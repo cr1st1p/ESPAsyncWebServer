@@ -100,3 +100,18 @@ void LightString::appendTo(String& dest) const {
 		dest.concat(FPSTR(flashString));
 	}
 }
+
+
+unsigned char LightString::startsWith(const String &prefix) const {
+	if (type == STRING)
+		return string.startsWith(prefix);
+	return asString().startsWith(prefix);
+}
+
+
+unsigned char LightString::startsWith(const String &prefix, unsigned int offset) const {
+	if (type == STRING)
+		return string.startsWith(prefix, offset);
+	return asString().startsWith(prefix, offset);
+}
+

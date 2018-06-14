@@ -106,6 +106,10 @@ public:
 
     void appendTo(String& dest) const;
 
+    unsigned char startsWith(const String &prefix) const;
+    unsigned char startsWith(const String &prefix, unsigned int offset) const;
+
+
 };
 
 
