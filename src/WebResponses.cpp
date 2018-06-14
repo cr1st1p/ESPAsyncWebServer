@@ -22,44 +22,47 @@
 #include "WebResponseImpl.h"
 #include "cbuf.h"
 
-#define DEBUG
 
+#ifdef DEBUG_ASYNC_WEBSERVER
 
-#ifdef DEBUG
-#define DBG(format, ...) os_printf(format, __VA_ARGS__)
+#define DBG(format, ...) os_printf(format,  __VA_ARGS__ )
+#define DBGF(format, ...) os_printf(String(format).c_str(),  __VA_ARGS__ )
 
-const char* DBG_STATE(WebResponseState state) {
+static String DBG_STATE_IMPL(WebResponseState state) {
 	switch(state) {
-		case RESPONSE_SETUP: return "RESPONSE_SETUP";
-		case RESPONSE_HEADERS: return "RESPONSE_HEADERS";
-		case RESPONSE_CONTENT: return "RESPONSE_CONTENT";
-		case RESPONSE_WAIT_ACK: return "RESPONSE_WAIT_ACK";
-		case RESPONSE_END: return "RESPONSE_END";
-		case RESPONSE_FAILED: return "RESPONSE_FAILED";
+		case RESPONSE_SETUP: return F("RESPONSE_SETUP");
+		case RESPONSE_HEADERS: return F("RESPONSE_HEADERS");
+		case RESPONSE_CONTENT: return F("RESPONSE_CONTENT");
+		case RESPONSE_WAIT_ACK: return F("RESPONSE_WAIT_ACK");
+		case RESPONSE_END: return F("RESPONSE_END");
+		case RESPONSE_FAILED: return F("RESPONSE_FAILED");
 	}
-	return "UNKNOWN?!";
+	return F("UNKNOWN?!");
 }
+
+#define DBG_STATE(state) DBG_STATE_IMPL(state).c_str()
+
 
 // DBG_AAR (Async Abtract Response)
 #define DBG_AAR(where, format, ...) \
-	DBG("AsyncAbtractResponse::_ack():%s state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
-			ESP.getFreeHeap(), request->client(), request->url().c_str(), __VA_ARGS__)
+	DBGF(F("AsyncAbtractResponse::_ack():%s state=%s freeHeap:%d client=%p url=%s " format), where, DBG_STATE(_state), \
+			ESP.getFreeHeap(), request->client(), request->url().c_str(),  ##__VA_ARGS__)
 
 // DBG_AAR (Async Basic Response)
 #define DBG_ABR(where, format, ...) \
-	DBG("AsyncBasicResponse::_ack():%s state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
-			ESP.getFreeHeap(), request->client(), request->url().c_str(), __VA_ARGS__)
+	DBGF(F("AsyncBasicResponse::_ack():%s state=%s freeHeap:%d client=%p url=%s " format), where, DBG_STATE(_state), \
+			ESP.getFreeHeap(), request->client(), request->url().c_str(), ##__VA_ARGS__)
 
 #define DBG_ABR_R(where, format, ...) \
-	DBG("AsyncBasicResponse::_respond():%s state=%s freeHeap:%d client=%p url=%s " format, where, DBG_STATE(_state), \
-			ESP.getFreeHeap(), request->client(), request->url().c_str(), __VA_ARGS__)
+	DBGF(F("AsyncBasicResponse::_respond():%s state=%s freeHeap:%d client=%p url=%s " format), where, DBG_STATE(_state), \
+			ESP.getFreeHeap(), request->client(), request->url().c_str(), ##__VA_ARGS__)
 
 
 #else
-#define DBG(format, ...) (void)
-#define DBG_AAR(where, format, ...) (void)
-#define DBG_ABR(where, format, ...) (void)
-#define DBG_ABR_R(where, format, ...) (void)
+#define DBG(format, ...) (void)0
+#define DBG_AAR(where, format, ...) (void)0
+#define DBG_ABR(where, format, ...) (void)0
+#define DBG_ABR_R(where, format, ...) (void)0
 #endif
 
 
@@ -261,7 +264,7 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
     DBG_ABR_R("p4", "wrote=%d. _writtenLength=%d. Will switch to RESPONSE_CONTENT\n", w, _writtenLength);
     _state = RESPONSE_CONTENT;
   } else {
-	DBG_ABR_R("p5", "Just switching to RESPONSE_CONTENT\n", "");
+	DBG_ABR_R("p5", "Just switching to RESPONSE_CONTENT\n");
     _content = out + _content;
     _contentLength += outLen;
     _state = RESPONSE_CONTENT;
@@ -291,17 +294,17 @@ size_t AsyncBasicResponse::_ack(AsyncWebServerRequest *request, size_t len, uint
     _sentLength += space;
     size_t w = request->client()->write(out.c_str(), space);
     _writtenLength += w;
-    DBG_ABR("p1.7", "written=%d, writtenLength=%d will switch to WAIT_ACK\n", w, _writtenLength);
+    DBG_ABR("p1.7", "written=%d, writtenLength=%d\n", w, _writtenLength);
     return space;
   } else if(_state == RESPONSE_WAIT_ACK){
 	DBG_ABR("p2", "_ackedLength=%d _writtenLength=%d\n\n", _ackedLength, _writtenLength);
     if(_ackedLength >= _writtenLength){
       _state = RESPONSE_END;
 	  // since we are automatically sending also connection:close
-	  request->client()->close(true);
+	  request->client()->close();
     }
   }
-  DBG_ABR("ret", "\n", "");
+  DBG_ABR("ret", "\n");
   return 0;
 }
 
@@ -373,7 +376,7 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     uint8_t *buf = (uint8_t *)malloc(outLen+headLen);
     DBG_AAR("s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
     if (!buf) {
-      DBG_AAR("s3", "OOPS. Out of memory?! Returning\n", "");
+      DBG_AAR("s3", "OOPS. Out of memory?! Returning\n");
       return 0;
     }
 
@@ -407,8 +410,8 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
           // TODO: if w < outLen, we're screwed for now. Code is not created to cope with this situation (like low memory)
           // we should just close the connection....
     	  _state = RESPONSE_END;
-    	  DBG_AAR("s4", "out of luck! We couldn't write data - probably out of memory. Closing connection", "");
-    	  request->client()->close(true);
+    	  DBG_AAR("s4", "out of luck! We couldn't write data - probably out of memory. Closing connection");
+    	  request->client()->close();
     	  return 0;
       }
     }
@@ -422,7 +425,7 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
 
     if((_chunked && readLen == 0) || (!_sendContentLength && outLen == 0) || (!_chunked && _sentLength == _contentLength)){
       _state = RESPONSE_WAIT_ACK;
-      DBG_AAR("switched to WAIT_ACK", "\n", "");
+      DBG_AAR("switched to WAIT_ACK", "\n");
     }
     return outLen;
 
@@ -433,14 +436,14 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
       _state = RESPONSE_END;
       // Since we're sending the 'Connection: close' header, let's also close the connection once we've written the content.
       if(!_chunked && (!_sendContentLength || (_writtenLength >= _contentLength))) {
-        request->client()->close(true);
-        DBG_AAR("s4", "closing connection\n", "");
+        request->client()->close();
+        DBG_AAR("s4", "closing connection\n");
       } else {
-    	DBG_AAR("s4", "NOT closing connection\n", "");
+    	DBG_AAR("s4", "NOT closing connection\n");
       }
     }
   }
-  DBG_AAR("ret0", "\n", "");
+  DBG_AAR("ret0", "\n");
   return 0;
 }
 
