@@ -115,3 +115,16 @@ unsigned char LightString::startsWith(const String &prefix, unsigned int offset)
 	return asString().startsWith(prefix, offset);
 }
 
+String LightString::substring(unsigned int beginIndex) const {
+	if (type == STRING)
+		return string.substring(beginIndex);
+	return asString().substring(beginIndex);
+}
+
+String LightString::substring(unsigned int beginIndex, unsigned int endIndex) const {
+	if (type == STRING)
+		return string.substring(beginIndex, endIndex);
+	return asString().substring(beginIndex, endIndex);
+}
+
+

@@ -109,7 +109,8 @@ public:
     unsigned char startsWith(const String &prefix) const;
     unsigned char startsWith(const String &prefix, unsigned int offset) const;
 
-
+    String substring(unsigned int beginIndex) const;
+    String substring(unsigned int beginIndex, unsigned int endIndex) const;
 };
 
 
