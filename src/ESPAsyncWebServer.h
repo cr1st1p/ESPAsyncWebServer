@@ -349,7 +349,7 @@ class AsyncWebServerResponse {
     size_t _ackedLength;
     size_t _writtenLength;
     WebResponseState _state;
-    const char* _responseCodeToString(int code);
+    String _responseCodeToString(int code);
 
   public:
     AsyncWebServerResponse();

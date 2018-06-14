@@ -1068,14 +1068,15 @@ void AsyncWebSocket::binaryAll(const __FlashStringHelper *message, size_t len){
   }
  }
 
-const char * WS_STR_CONNECTION = "Connection";
-const char * WS_STR_UPGRADE = "Upgrade";
-const char * WS_STR_ORIGIN = "Origin";
-const char * WS_STR_VERSION = "Sec-WebSocket-Version";
-const char * WS_STR_KEY = "Sec-WebSocket-Key";
-const char * WS_STR_PROTOCOL = "Sec-WebSocket-Protocol";
-const char * WS_STR_ACCEPT = "Sec-WebSocket-Accept";
-const char * WS_STR_UUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+#define WS_STR_CONNECTION F("Connection")
+#define WS_STR_UPGRADE F("Upgrade")
+#define WS_STR_ORIGIN F("Origin")
+#define WS_STR_VERSION F("Sec-WebSocket-Version")
+#define WS_STR_KEY F("Sec-WebSocket-Key")
+#define WS_STR_PROTOCOL F("Sec-WebSocket-Protocol")
+#define WS_STR_ACCEPT F("Sec-WebSocket-Accept")
+#define WS_STR_UUID F("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+
 
 bool AsyncWebSocket::canHandle(AsyncWebServerRequest *request){
   if(!_enabled)
