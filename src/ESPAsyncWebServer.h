@@ -76,7 +76,7 @@ private:
 		String string;
 	};
 	enum Type {FLASH, STRING};
-	uint8_t type; // enum per-se is taking 8 bytes
+	uint8_t _type; // enum per-se is taking 8 bytes
 
 
 public:
@@ -92,10 +92,16 @@ public:
 
 	~LightString();
 
-	void changeToStringType();
+	void clear();
+
+	inline Type type() const { return (Type) _type; }
+
+	void changeToStringType(bool keepData = false);
+	void changeToFlashStringType();
 	String asString() const;
 
 	LightString& operator=(const char* s);
+	LightString& operator=(FlashString s);
 	LightString& operator=(const String& rhs);
 	LightString& operator=(const LightString& rhs);
 	LightString& operator=(LightString&& rhs);
@@ -103,6 +109,8 @@ public:
 
 
 	unsigned int length(void) const;
+	bool isEmpty() const; // use this instead of length if you do not really care about the length
+
 	int atoi() const;
 	long toInt(void) const;
 	unsigned char equalsIgnoreCase(const String &s) const;
@@ -121,6 +129,8 @@ public:
 
     String substring(unsigned int beginIndex) const;
     String substring(unsigned int beginIndex, unsigned int endIndex) const;
+
+    const char* c_str();
 };
 
 
@@ -296,8 +306,8 @@ class AsyncWebServerRequest {
     void send_P(int code, const String& contentType, const uint8_t * content, size_t len, AwsTemplateProcessor callback=nullptr);
     void send_P(int code, const String& contentType, PGM_P content, AwsTemplateProcessor callback=nullptr);
 
-    AsyncWebServerResponse *beginResponse(int code, const LightString& contentType, const LightString& content=String());
-    AsyncWebServerResponse *beginResponse(int code, LightString&& contentType=String(), LightString&& content=String());
+    AsyncWebServerResponse *beginResponse(int code, const LightString& contentType, const LightString& content = LightString());
+    AsyncWebServerResponse *beginResponse(int code, LightString&& contentType = LightString(), LightString&& content = LightString());
 
     AsyncWebServerResponse *beginResponse(FS &fs, const String& path, const String& contentType=String(), bool download=false, AwsTemplateProcessor callback=nullptr);
     AsyncWebServerResponse *beginResponse(File content, const String& path, const String& contentType=String(), bool download=false, AwsTemplateProcessor callback=nullptr);
@@ -409,6 +419,7 @@ typedef enum {
 class AsyncWebServerResponse {
   protected:
     int _code;
+    // CRISTI: SEEME: replace with std::vector<AsyncWebHeader> ?
     LinkedList<AsyncWebHeader *> _headers;
     LightString _contentType;
     size_t _contentLength;

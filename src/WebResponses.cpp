@@ -193,9 +193,10 @@ String AsyncWebServerResponse::_assembleHead(uint8_t version){
     snprintf(buf, bufSize, "Content-Length: %d\r\n", _contentLength);
     out.concat(buf);
   }
-  if(_contentType.length()) {
-    snprintf(buf, bufSize, "Content-Type: %s\r\n", _contentType.c_str());
-    out.concat(buf);
+  if(!_contentType.isEmpty()) {
+	out += F("Content-Type: ");
+	_contentType.appendTo(out);
+	out += "\r\n";
   }
 
   for(const auto& header: _headers){
@@ -221,41 +222,39 @@ size_t AsyncWebServerResponse::_ack(AsyncWebServerRequest *request, size_t len, 
 /*
  * String/Code Response
  * */
-AsyncBasicResponse::AsyncBasicResponse(int code, const String& contentType, const LightString& content)
+AsyncBasicResponse::AsyncBasicResponse(int code, const LightString& contentType, const LightString& content)
 	: AsyncWebServerResponse(),
 	  _content(content)
 {
-  Serial.println("AsyncBasicResponse::AsyncBasicResponse(int code, const String& contentType, const String& content) ");
+  Serial.println(__PRETTY_FUNCTION__);
 
   setCode(code);
   setContentType(contentType);
 
-  if(_content.length()){
-    _contentLength = _content.length();
-    if(!_contentType.length())
-      _contentType = "text/plain";
-  }
-  addHeader(F("Connection"), F("close"));
+  init();
 }
 
 
-AsyncBasicResponse::AsyncBasicResponse(int code, String&& contentType, LightString&& content)
+AsyncBasicResponse::AsyncBasicResponse(int code, LightString&& contentType, LightString&& content)
 : AsyncWebServerResponse(),
 	_content(std::move(content))
 {
-  Serial.println("AsyncBasicResponse::AsyncBasicResponse(int code, String&& contentType, String&& content) ");
+  Serial.println(__PRETTY_FUNCTION__);
 
   setCode(code);
-  _contentType = std::move(contentType);
+  setContentType(contentType);
 
-  if(_content.length()){
-    _contentLength = _content.length();
-    if(!_contentType.length())
-      _contentType = F("text/plain");
-  }
-  addHeader(F("Connection"), F("close"));
+  init();
 }
 
+void AsyncBasicResponse::init() {
+	  if(_content.length()){
+	    _contentLength = _content.length();
+	    if(!_contentType.length())
+	      _contentType = F("text/plain");
+	  }
+	  addHeader(F("Connection"), F("close"));
+}
 
 
 void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
@@ -272,7 +271,7 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
     DBG_ABR_R("p1", "wrote=%d. Just headers. Will switch to ACK\n", w);
     _state = RESPONSE_WAIT_ACK;
   } else if(_contentLength && space >= outLen + _contentLength){
-    out += _content;
+	_content.appendTo(out);
     outLen += _contentLength;
     size_t w = request->client()->write(out.c_str(), outLen);
     _writtenLength += w;
@@ -280,7 +279,7 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
     _state = RESPONSE_WAIT_ACK;
   } else if(space && space < outLen){
     String partial = out.substring(0, space);
-    _content = out.substring(space) + _content;
+    _content = out.substring(space) + _content.asString();
     _contentLength += outLen - space;
     size_t w = request->client()->write(partial.c_str(), partial.length());
     _writtenLength += w;
@@ -298,7 +297,7 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
     _state = RESPONSE_CONTENT;
   } else {
 	DBG_ABR_R("p5", "Just switching to RESPONSE_CONTENT\n");
-    _content = out + _content;
+    _content = out + _content.asString();
     _contentLength += outLen;
     _state = RESPONSE_CONTENT;
   }
@@ -316,7 +315,7 @@ size_t AsyncBasicResponse::_ack(AsyncWebServerRequest *request, size_t len, uint
     if(space > available){
       size_t w = request->client()->write(_content.c_str(), available);
       _writtenLength += w;
-      _content = String();
+      _content.clear();
       DBG_ABR("p1.5", "written=%d, writtenLength=%d will switch to WAIT_ACK\n", w, _writtenLength);
       _state = RESPONSE_WAIT_ACK;
       return available;

@@ -33,12 +33,14 @@ class AsyncBasicResponse: public AsyncWebServerResponse {
   private:
     LightString _content;
   public:
-    AsyncBasicResponse(int code, const String& contentType, const LightString& content=LightString());
-    AsyncBasicResponse(int code, String&& contentType=String(), LightString&& content=String());
+    AsyncBasicResponse(int code, const LightString& contentType, const LightString& content=LightString());
+    AsyncBasicResponse(int code, LightString&& contentType=String(), LightString&& content=String());
 
     void _respond(AsyncWebServerRequest *request);
     size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time);
     bool _sourceValid() const { return true; }
+  protected:
+    void init();
 };
 
 class AsyncAbstractResponse: public AsyncWebServerResponse {

@@ -2,68 +2,95 @@
 
 
 
-void LightString::changeToStringType() {
-	if (type == STRING)
+void LightString::changeToStringType(bool keepData ) {
+	if (_type == STRING)
 		return;
-	//flashString.~FlashStringStorage();
+	FlashStringStorage temp = flashString;
 
-	type = STRING;
-	new (&string) String();
+	flashString.~FlashStringStorage();
+
+	_type = STRING;
+	if (keepData)
+		new (&string) String(temp);
+	else
+		new (&string) String();
 }
 
-LightString::LightString(FlashString s) :
-	type(FLASH) {
-	flashString = (FlashStringStorage)s;
 
+void LightString::changeToFlashStringType() {
+	if (_type == FLASH)
+		return;
+
+	string.~String();
+	_type = FLASH;
+	new (&flashString) FlashStringStorage();
+}
+
+
+LightString::LightString(FlashString s) :
+	_type(FLASH) {
+	new (&flashString) FlashStringStorage((FlashStringStorage)s);
 }
 
 LightString::LightString(const String& s) :
-	type(STRING) {
+	_type(STRING) {
 	new (&string) String(s);
 }
 
 LightString::LightString(String&& rval) :
-	type(STRING) {
+	_type(STRING) {
 	new (&string) String(std::move(rval));
 }
 
 
 LightString::LightString(const LightString& s) :
-		type(s.type)
+		_type(s._type)
 {
-	if (type == FLASH)
-		flashString = std::move(s.flashString);
+	if (_type == FLASH)
+		new (&flashString) FlashStringStorage(s.flashString);
 	else
-		new (&string) String(std::move(s.string));
+		new (&string) String(s.string);
 }
 
 LightString::LightString(LightString&& s) :
-		type(std::move(s.type))
+		_type(std::move(s._type))
 {
-	if (type == FLASH)
-		flashString = s.flashString;
+	if (_type == FLASH)
+		new (&flashString) FlashStringStorage(std::move(s.flashString));
 	else
 		new (&string) String(std::move(s.string));
 }
 
 
 LightString::LightString(const char* s)
-	: type(STRING) {
+	: _type(STRING) {
 	new (&string) String(s);
 }
 
 
 
 LightString::~LightString() {
-	if (type == STRING) {
+	if (_type == STRING) {
 		   string.~String();
 	} else {
-		   //flashString.~FlashStringStorage();
+		   flashString.~FlashStringStorage();
 	}
 }
 
+
+void LightString::clear() {
+	if (_type == STRING) {
+		string.~String();
+		_type = FLASH;
+		new (&flashString) FlashStringStorage();
+	} else {
+		flashString = nullptr;
+	}
+}
+
+
 String LightString::asString() const {
-	if (type == FLASH)
+	if (_type == FLASH)
 		return String(FPSTR(flashString));
 	return string;
 }
@@ -74,6 +101,12 @@ LightString& LightString::operator=(const char* s) {
 	return *this;
 }
 
+LightString& LightString::operator=(FlashString s) {
+	*this = LightString(s);
+	return *this;
+}
+
+
 LightString& LightString::operator=(const String& rhs) {
 	changeToStringType();
 	string = rhs;
@@ -81,8 +114,10 @@ LightString& LightString::operator=(const String& rhs) {
 }
 
 LightString& LightString::operator=(String&& rvalue) {
-	if (type == FLASH) {
-		type = STRING;
+	if (_type == FLASH) {
+		flashString.~FlashStringStorage();
+
+		_type = STRING;
 		new (&string) String(std::move(rvalue));
 	} else {
 		string = std::move(rvalue);
@@ -91,42 +126,57 @@ LightString& LightString::operator=(String&& rvalue) {
 }
 
 LightString& LightString::operator=(const LightString& rhs) {
-	if (type == FLASH) {
-		if (rhs.type == FLASH) {
+	if (_type == FLASH) {
+		if (rhs._type == FLASH) {
 			flashString = rhs.flashString;
 		} else {
-			type = STRING;
+			flashString.~FlashStringStorage();
+			_type = STRING;
 			new (&string) String(rhs.string);
 		}
 	} else {
-		if (rhs.type == FLASH)
-			string = FPSTR(rhs.flashString);
-		else
+		if (rhs._type == FLASH) {
+			string.~String();
+			_type = FLASH;
+			new (&flashString) FlashStringStorage(rhs.flashString);
+		} else
 			string = rhs.string;
 	}
 	return *this;
 }
 
 LightString& LightString::operator=(LightString&& rhs) {
-	if (type == FLASH) {
-		if (rhs.type == FLASH) {
-			flashString = rhs.flashString;
+	if (_type == FLASH) {
+		if (rhs._type == FLASH) {
+			flashString = std::move(rhs.flashString);
 		} else {
-			type = STRING;
+			flashString.~FlashStringStorage();
+			_type = STRING;
 			new (&string) String(std::move(rhs.string));
 		}
 	} else {
-		if (rhs.type == FLASH)
-			string = FPSTR(rhs.flashString);
-		else
+		if (rhs._type == FLASH) {
+			string.~String();
+			_type = FLASH;
+			new (&flashString) FlashStringStorage(std::move(rhs.flashString));
+		} else
 			string = std::move(rhs.string);
 	}
 	return *this;
 }
 
+bool LightString::isEmpty() const {
+	if (_type == STRING)
+		return string.length() == 0;
+	if (!flashString)
+		return true;
+	// we check first byte to see if it is a C string end terminator
+	return 0 == pgm_read_byte_inlined(flashString);
+}
+
 
 unsigned int LightString::length(void) const {
-	if (type == STRING)
+	if (_type == STRING)
 		return string.length();
 	if (!flashString)
 		return 0;
@@ -134,7 +184,10 @@ unsigned int LightString::length(void) const {
 }
 
 int LightString::atoi() const {
-	if (type == FLASH) {
+	if (_type == FLASH) {
+		if (!flashString)
+			return -1; // HMM
+
 		char s[30];
 		strncpy_P(s, flashString, sizeof(s) / sizeof(s[0] - 1));
 		s[29] = '\0';
@@ -144,7 +197,10 @@ int LightString::atoi() const {
 }
 
 long LightString::toInt(void) const {
-	if (type == FLASH) {
+	if (_type == FLASH) {
+		if (!flashString)
+			return -1;
+
 		char s[30];
 		strncpy_P(s, flashString, sizeof(s) / sizeof(s[0] - 1));
 		s[29] = '\0';
@@ -155,21 +211,21 @@ long LightString::toInt(void) const {
 }
 
 unsigned char LightString::equalsIgnoreCase(const String &s) const {
-	if (type == STRING)
+	if (_type == STRING)
 		return string.equalsIgnoreCase(s);
 	return strcasecmp_P(s.c_str(), flashString) == 0;
 }
 
 
 unsigned char LightString::equals(const char *cstr) const {
-	if (type == STRING)
+	if (_type == STRING)
 		return string.equals(cstr);
-	return strcmp(cstr, flashString) == 0;
+	return strcmp_P(cstr, flashString) == 0;
 }
 
 
 void LightString::appendTo(String& dest) const {
-	if (type == STRING) {
+	if (_type == STRING) {
 		dest.concat(string);
 	} else {
 		dest.concat(FPSTR(flashString));
@@ -178,28 +234,32 @@ void LightString::appendTo(String& dest) const {
 
 
 unsigned char LightString::startsWith(const String &prefix) const {
-	if (type == STRING)
+	if (_type == STRING)
 		return string.startsWith(prefix);
-	return asString().startsWith(prefix);
+
+	return strncmp_P(prefix.c_str(), flashString, prefix.length()) == 0;
 }
 
 
 unsigned char LightString::startsWith(const String &prefix, unsigned int offset) const {
-	if (type == STRING)
+	if (_type == STRING)
 		return string.startsWith(prefix, offset);
 	return asString().startsWith(prefix, offset);
 }
 
 String LightString::substring(unsigned int beginIndex) const {
-	if (type == STRING)
+	if (_type == STRING)
 		return string.substring(beginIndex);
 	return asString().substring(beginIndex);
 }
 
 String LightString::substring(unsigned int beginIndex, unsigned int endIndex) const {
-	if (type == STRING)
+	if (_type == STRING)
 		return string.substring(beginIndex, endIndex);
 	return asString().substring(beginIndex, endIndex);
 }
 
-
+const char* LightString::c_str() {
+	changeToStringType(true);
+	return string.c_str();
+}
