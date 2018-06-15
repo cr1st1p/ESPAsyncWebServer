@@ -722,8 +722,12 @@ void AsyncWebServerRequest::send(AsyncWebServerResponse *response){
   }
 }
 
-AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(int code, const String& contentType, const String& content){
+AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(int code, const LightString& contentType, const LightString& content){
   return new AsyncBasicResponse(code, contentType, content);
+}
+
+AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(int code, LightString&& contentType, LightString&& content) {
+	return new AsyncBasicResponse(code, contentType, content);
 }
 
 AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(FS &fs, const String& path, const String& contentType, bool download, AwsTemplateProcessor callback){
@@ -764,8 +768,12 @@ AsyncWebServerResponse * AsyncWebServerRequest::beginResponse_P(int code, const 
   return beginResponse_P(code, contentType, (const uint8_t *)content, strlen_P(content), callback);
 }
 
-void AsyncWebServerRequest::send(int code, const String& contentType, const String& content){
+void AsyncWebServerRequest::send(int code, const LightString& contentType, const LightString& content){
   send(beginResponse(code, contentType, content));
+}
+
+void AsyncWebServerRequest::send(int code, LightString&& contentType, LightString&& content) {
+	send(beginResponse(code, contentType, content));
 }
 
 void AsyncWebServerRequest::send(FS &fs, const String& path, const String& contentType, bool download, AwsTemplateProcessor callback){

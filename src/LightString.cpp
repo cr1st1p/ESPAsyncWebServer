@@ -68,6 +68,11 @@ String LightString::asString() const {
 	return string;
 }
 
+LightString& LightString::operator=(const char* s) {
+	changeToStringType();
+	string = s;
+	return *this;
+}
 
 LightString& LightString::operator=(const String& rhs) {
 	changeToStringType();
@@ -85,6 +90,48 @@ LightString& LightString::operator=(String&& rvalue) {
 	return *this;
 }
 
+LightString& LightString::operator=(const LightString& rhs) {
+	if (type == FLASH) {
+		if (rhs.type == FLASH) {
+			flashString = rhs.flashString;
+		} else {
+			type = STRING;
+			new (&string) String(rhs.string);
+		}
+	} else {
+		if (rhs.type == FLASH)
+			string = FPSTR(rhs.flashString);
+		else
+			string = rhs.string;
+	}
+	return *this;
+}
+
+LightString& LightString::operator=(LightString&& rhs) {
+	if (type == FLASH) {
+		if (rhs.type == FLASH) {
+			flashString = rhs.flashString;
+		} else {
+			type = STRING;
+			new (&string) String(std::move(rhs.string));
+		}
+	} else {
+		if (rhs.type == FLASH)
+			string = FPSTR(rhs.flashString);
+		else
+			string = std::move(rhs.string);
+	}
+	return *this;
+}
+
+
+unsigned int LightString::length(void) const {
+	if (type == STRING)
+		return string.length();
+	if (!flashString)
+		return 0;
+	return strlen_P(flashString);
+}
 
 int LightString::atoi() const {
 	if (type == FLASH) {

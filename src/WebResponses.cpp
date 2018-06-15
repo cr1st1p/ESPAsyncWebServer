@@ -161,10 +161,16 @@ void AsyncWebServerResponse::setContentLength(size_t len){
     _contentLength = len;
 }
 
-void AsyncWebServerResponse::setContentType(const String& type){
-  if(_state == RESPONSE_SETUP)
-    _contentType = type;
+void AsyncWebServerResponse::setContentType(const LightString& type) {
+	if(_state == RESPONSE_SETUP)
+	  _contentType = type;
 }
+
+void AsyncWebServerResponse::setContentType(LightString&& type) {
+	if(_state == RESPONSE_SETUP)
+	  _contentType = std::move(type);
+}
+
 
 void AsyncWebServerResponse::addHeader(const LightString& name, const LightString& value){
   _headers.add(new AsyncWebHeader(name, value));
@@ -215,10 +221,15 @@ size_t AsyncWebServerResponse::_ack(AsyncWebServerRequest *request, size_t len, 
 /*
  * String/Code Response
  * */
-AsyncBasicResponse::AsyncBasicResponse(int code, const String& contentType, const String& content){
-  _code = code;
-  _content = content;
-  _contentType = contentType;
+AsyncBasicResponse::AsyncBasicResponse(int code, const String& contentType, const LightString& content)
+	: AsyncWebServerResponse(),
+	  _content(content)
+{
+  Serial.println("AsyncBasicResponse::AsyncBasicResponse(int code, const String& contentType, const String& content) ");
+
+  setCode(code);
+  setContentType(contentType);
+
   if(_content.length()){
     _contentLength = _content.length();
     if(!_contentType.length())
@@ -226,6 +237,26 @@ AsyncBasicResponse::AsyncBasicResponse(int code, const String& contentType, cons
   }
   addHeader(F("Connection"), F("close"));
 }
+
+
+AsyncBasicResponse::AsyncBasicResponse(int code, String&& contentType, LightString&& content)
+: AsyncWebServerResponse(),
+	_content(std::move(content))
+{
+  Serial.println("AsyncBasicResponse::AsyncBasicResponse(int code, String&& contentType, String&& content) ");
+
+  setCode(code);
+  _contentType = std::move(contentType);
+
+  if(_content.length()){
+    _contentLength = _content.length();
+    if(!_contentType.length())
+      _contentType = F("text/plain");
+  }
+  addHeader(F("Connection"), F("close"));
+}
+
+
 
 void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
   _state = RESPONSE_HEADERS;
