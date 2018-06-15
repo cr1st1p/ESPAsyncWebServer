@@ -14,6 +14,7 @@ void LightString::changeToStringType() {
 LightString::LightString(FlashString s) :
 	type(FLASH) {
 	flashString = (FlashStringStorage)s;
+
 }
 
 LightString::LightString(const String& s) :
@@ -21,14 +22,30 @@ LightString::LightString(const String& s) :
 	new (&string) String(s);
 }
 
+LightString::LightString(String&& rval) :
+	type(STRING) {
+	new (&string) String(std::move(rval));
+}
+
+
 LightString::LightString(const LightString& s) :
 		type(s.type)
 {
 	if (type == FLASH)
+		flashString = std::move(s.flashString);
+	else
+		new (&string) String(std::move(s.string));
+}
+
+LightString::LightString(LightString&& s) :
+		type(std::move(s.type))
+{
+	if (type == FLASH)
 		flashString = s.flashString;
 	else
-		new (&string) String(s.string);
+		new (&string) String(std::move(s.string));
 }
+
 
 LightString::LightString(const char* s)
 	: type(STRING) {
@@ -57,6 +74,17 @@ LightString& LightString::operator=(const String& rhs) {
 	string = rhs;
 	return *this;
 }
+
+LightString& LightString::operator=(String&& rvalue) {
+	if (type == FLASH) {
+		type = STRING;
+		new (&string) String(std::move(rvalue));
+	} else {
+		string = std::move(rvalue);
+	}
+	return *this;
+}
+
 
 int LightString::atoi() const {
 	if (type == FLASH) {

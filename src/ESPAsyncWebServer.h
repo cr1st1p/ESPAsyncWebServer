@@ -83,7 +83,11 @@ public:
 
 	LightString(FlashString s = nullptr);
 	LightString(const String& s);
+	LightString(String&& rval);
+
 	LightString(const LightString& s);
+	LightString(LightString&& rval);
+
 	LightString(const char* s);
 
 	~LightString();
@@ -92,6 +96,7 @@ public:
 	String asString() const;
 
 	LightString& operator=(const String& rhs);
+	LightString& operator=(String&& rvalue);
 
 	int atoi() const;
 	long toInt(void) const;
