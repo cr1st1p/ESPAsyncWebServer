@@ -170,8 +170,10 @@ class AsyncWebHeader {
     AsyncWebHeader(const LightString& name, const LightString& value): _name(name), _value(value){}
     AsyncWebHeader(LightString&& name, LightString&& value): _name(std::move(name)), _value(std::move(value)){}
 
+#if 0
     AsyncWebHeader(const String& name, const String& value): _name(name), _value(value){}
     AsyncWebHeader(String&& name, String&& value): _name(name), _value(value){}
+#endif
 
     AsyncWebHeader(const String& data): _name(), _value(){
       if(!data) return;
@@ -295,7 +297,7 @@ class AsyncWebServerRequest {
     void redirect(const String& url);
 
     void send(AsyncWebServerResponse *response);
-    void send(int code, const LightString& contentType, const LightString& content = LightString());
+    //void send(int code, const LightString& contentType, const LightString& content = LightString());
     void send(int code, LightString&& contentType = LightString(), LightString&& content = LightString());
 
     void send(FS &fs, const String& path, const String& contentType=String(), bool download=false, AwsTemplateProcessor callback=nullptr);
@@ -306,7 +308,7 @@ class AsyncWebServerRequest {
     void send_P(int code, const String& contentType, const uint8_t * content, size_t len, AwsTemplateProcessor callback=nullptr);
     void send_P(int code, const String& contentType, PGM_P content, AwsTemplateProcessor callback=nullptr);
 
-    AsyncWebServerResponse *beginResponse(int code, const LightString& contentType, const LightString& content = LightString());
+    //AsyncWebServerResponse *beginResponse(int code, const LightString& contentType, const LightString& content = LightString());
     AsyncWebServerResponse *beginResponse(int code, LightString&& contentType = LightString(), LightString&& content = LightString());
 
     AsyncWebServerResponse *beginResponse(FS &fs, const String& path, const String& contentType=String(), bool download=false, AwsTemplateProcessor callback=nullptr);
@@ -440,6 +442,7 @@ class AsyncWebServerResponse {
     virtual void setContentType(const LightString& type);
     virtual void setContentType(LightString&& type);
 
+    virtual void addHeader(LightString&& name, LightString&& value);
     virtual void addHeader(const LightString& name, const LightString& value);
     virtual String _assembleHead(uint8_t version);
     virtual bool _started() const;

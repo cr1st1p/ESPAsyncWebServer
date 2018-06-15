@@ -722,12 +722,16 @@ void AsyncWebServerRequest::send(AsyncWebServerResponse *response){
   }
 }
 
+#if 0
 AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(int code, const LightString& contentType, const LightString& content){
+	Serial.println(__PRETTY_FUNCTION__);
   return new AsyncBasicResponse(code, contentType, content);
 }
+#endif
 
 AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(int code, LightString&& contentType, LightString&& content) {
-	return new AsyncBasicResponse(code, contentType, content);
+	Serial.println(__PRETTY_FUNCTION__);
+	return new AsyncBasicResponse(code, std::move(contentType), std::move(content));
 }
 
 AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(FS &fs, const String& path, const String& contentType, bool download, AwsTemplateProcessor callback){
@@ -768,12 +772,14 @@ AsyncWebServerResponse * AsyncWebServerRequest::beginResponse_P(int code, const 
   return beginResponse_P(code, contentType, (const uint8_t *)content, strlen_P(content), callback);
 }
 
+#if 0
 void AsyncWebServerRequest::send(int code, const LightString& contentType, const LightString& content){
   send(beginResponse(code, contentType, content));
 }
+#endif
 
 void AsyncWebServerRequest::send(int code, LightString&& contentType, LightString&& content) {
-	send(beginResponse(code, contentType, content));
+	send(beginResponse(code, std::move(contentType), std::move(content)));
 }
 
 void AsyncWebServerRequest::send(FS &fs, const String& path, const String& contentType, bool download, AwsTemplateProcessor callback){

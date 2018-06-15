@@ -172,9 +172,15 @@ void AsyncWebServerResponse::setContentType(LightString&& type) {
 }
 
 
+void AsyncWebServerResponse::addHeader(LightString&& name, LightString&& value){
+	Serial.println(__PRETTY_FUNCTION__);
+  _headers.add(new AsyncWebHeader(std::move(name), std::move(value)));
+}
 void AsyncWebServerResponse::addHeader(const LightString& name, const LightString& value){
+	Serial.println(__PRETTY_FUNCTION__);
   _headers.add(new AsyncWebHeader(name, value));
 }
+
 
 String AsyncWebServerResponse::_assembleHead(uint8_t version){
   if(version){
@@ -229,7 +235,7 @@ AsyncBasicResponse::AsyncBasicResponse(int code, const LightString& contentType,
   Serial.println(__PRETTY_FUNCTION__);
 
   setCode(code);
-  setContentType(contentType);
+  _contentType = contentType;
 
   init();
 }
@@ -242,24 +248,32 @@ AsyncBasicResponse::AsyncBasicResponse(int code, LightString&& contentType, Ligh
   Serial.println(__PRETTY_FUNCTION__);
 
   setCode(code);
-  setContentType(contentType);
+  _contentType = std::move(contentType);
 
   init();
 }
 
 void AsyncBasicResponse::init() {
-	  if(_content.length()){
+	Serial.println(__PRETTY_FUNCTION__);
+
+	if(!_content.isEmpty()){
 	    _contentLength = _content.length();
-	    if(!_contentType.length())
+	    if(_contentType.isEmpty())
 	      _contentType = F("text/plain");
-	  }
-	  addHeader(F("Connection"), F("close"));
+	}
+	addHeader(F("Connection"), F("close"));
+
+	Serial.printf("%s - end", __PRETTY_FUNCTION__);
 }
 
 
+
 void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
+	Serial.println(__PRETTY_FUNCTION__);
+
   _state = RESPONSE_HEADERS;
   String out = _assembleHead(request->version());
+  Serial.printf("%s: p1\n", __PRETTY_FUNCTION__);
   size_t outLen = out.length();
   size_t space = request->client()->space();
 
@@ -273,6 +287,7 @@ void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
   } else if(_contentLength && space >= outLen + _contentLength){
 	_content.appendTo(out);
     outLen += _contentLength;
+    DBG_ABR_R("p2.0", "\n");
     size_t w = request->client()->write(out.c_str(), outLen);
     _writtenLength += w;
     DBG_ABR_R("p2", "wrote=%d. _writtenLength=%d. Will switch to ACK\n", w, _writtenLength);
