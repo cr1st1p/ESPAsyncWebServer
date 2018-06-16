@@ -514,9 +514,14 @@ class DefaultHeaders {
 public:
   using ConstIterator = headers_t::ConstIterator;
 
-  void addHeader(const String& name, const String& value){
+  void addHeader(const LightString& name, const LightString& value){
+	  Serial.println(__PRETTY_FUNCTION__);
     _headers.add(new AsyncWebHeader(name, value));
   }  
+  void addHeader(LightString&& name, LightString&& value){
+	  Serial.println(__PRETTY_FUNCTION__);
+    _headers.add(new AsyncWebHeader(std::move(name), std::move(value)));
+  }
   
   ConstIterator begin() const { return _headers.begin(); }
   ConstIterator end() const { return _headers.end(); }
