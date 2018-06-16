@@ -44,7 +44,7 @@
 #define DBG_START_FUNCTION() Serial.println(__PRETTY_FUNCTION__)
 #define DBG_END_FUNCTION() Serial.printf("%s - end\n", __PRETTY_FUNCTION__)
 #else
-#define DB_START_FUNCTION()
+#define DBG_START_FUNCTION()
 #define DBG_END_FUNCTION()
 #endif
 
