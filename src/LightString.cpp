@@ -49,7 +49,7 @@ LightString::LightString(String&& rval) :
 LightString::LightString(const LightString& s) :
 		_type(s._type)
 {
-	Serial.println(__PRETTY_FUNCTION__);
+	Serial.printf("%s: srcType=%s\n", __PRETTY_FUNCTION__, (s.type() == FLASH)? "FlashString":"String");
 	if (_type == FLASH)
 		new (&flashString) FlashStringStorage(s.flashString);
 	else
@@ -59,7 +59,7 @@ LightString::LightString(const LightString& s) :
 LightString::LightString(LightString&& s) :
 		_type(std::move(s._type))
 {
-	Serial.println(__PRETTY_FUNCTION__);
+	Serial.printf("%s: srcType=%s\n", __PRETTY_FUNCTION__, (s.type() == FLASH)? "FlashString":"String");
 	if (_type == FLASH)
 		new (&flashString) FlashStringStorage(std::move(s.flashString));
 	else
@@ -76,7 +76,7 @@ LightString::LightString(const char* s)
 
 
 LightString::~LightString() {
-	Serial.println(__PRETTY_FUNCTION__);
+	Serial.printf("%s: Type=%s\n", __PRETTY_FUNCTION__, (s.type() == FLASH)? "FlashString":"String");
 	if (_type == STRING) {
 		   string.~String();
 	} else {
