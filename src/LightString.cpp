@@ -1,6 +1,6 @@
 #include "ESPAsyncWebServer.h"
 
-
+//#define DBG_LIGHTSTRING
 
 void LightString::changeToStringType(bool keepData ) {
 	if (_type == STRING)
@@ -29,19 +29,25 @@ void LightString::changeToFlashStringType() {
 
 LightString::LightString(FlashString s) :
 	_type(FLASH) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	new (&flashString) FlashStringStorage((FlashStringStorage)s);
 }
 
 LightString::LightString(const String& s) :
 	_type(STRING) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	new (&string) String(s);
 }
 
 LightString::LightString(String&& rval) :
 	_type(STRING) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	new (&string) String(std::move(rval));
 }
 
@@ -49,7 +55,9 @@ LightString::LightString(String&& rval) :
 LightString::LightString(const LightString& s) :
 		_type(s._type)
 {
+#ifdef DBG_LIGHTSTRING
 	Serial.printf("%s: srcType=%s\n", __PRETTY_FUNCTION__, (s.type() == FLASH)? "FlashString":"String");
+#endif
 	if (_type == FLASH)
 		new (&flashString) FlashStringStorage(s.flashString);
 	else
@@ -59,7 +67,9 @@ LightString::LightString(const LightString& s) :
 LightString::LightString(LightString&& s) :
 		_type(std::move(s._type))
 {
+#ifdef DBG_LIGHTSTRING
 	Serial.printf("%s: srcType=%s\n", __PRETTY_FUNCTION__, (s.type() == FLASH)? "FlashString":"String");
+#endif
 	if (_type == FLASH)
 		new (&flashString) FlashStringStorage(std::move(s.flashString));
 	else
@@ -69,14 +79,18 @@ LightString::LightString(LightString&& s) :
 
 LightString::LightString(const char* s)
 	: _type(STRING) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	new (&string) String(s);
 }
 
 
 
 LightString::~LightString() {
-	Serial.printf("%s: Type=%s\n", __PRETTY_FUNCTION__, (s.type() == FLASH)? "FlashString":"String");
+#ifdef DBG_LIGHTSTRING
+	Serial.printf("%s: Type=%s\n", __PRETTY_FUNCTION__, (type() == FLASH)? "FlashString":"String");
+#endif
 	if (_type == STRING) {
 		   string.~String();
 	} else {
@@ -109,21 +123,27 @@ LightString& LightString::operator=(const char* s) {
 }
 
 LightString& LightString::operator=(FlashString s) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	*this = LightString(s);
 	return *this;
 }
 
 
 LightString& LightString::operator=(const String& rhs) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	changeToStringType();
 	string = rhs;
 	return *this;
 }
 
 LightString& LightString::operator=(String&& rvalue) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	if (_type == FLASH) {
 		flashString.~FlashStringStorage();
 
@@ -136,7 +156,9 @@ LightString& LightString::operator=(String&& rvalue) {
 }
 
 LightString& LightString::operator=(const LightString& rhs) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	if (_type == FLASH) {
 		if (rhs._type == FLASH) {
 			flashString = rhs.flashString;
@@ -157,7 +179,9 @@ LightString& LightString::operator=(const LightString& rhs) {
 }
 
 LightString& LightString::operator=(LightString&& rhs) {
+#ifdef DBG_LIGHTSTRING
 	Serial.println(__PRETTY_FUNCTION__);
+#endif
 	if (_type == FLASH) {
 		if (rhs._type == FLASH) {
 			flashString = std::move(rhs.flashString);

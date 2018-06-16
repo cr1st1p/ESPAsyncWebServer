@@ -40,6 +40,16 @@
 
 #define DEBUGF(...) //Serial.printf(__VA_ARGS__)
 
+#if 0
+#define DBG_START_FUNCTION() Serial.println(__PRETTY_FUNCTION__)
+#define DBG_END_FUNCTION() Serial.printf("%s - end\n", __PRETTY_FUNCTION__)
+#else
+#define DB_START_FUNCTION()
+#define DBG_END_FUNCTION()
+#endif
+
+
+
 class AsyncWebServer;
 class AsyncWebServerRequest;
 class AsyncWebServerResponse;
@@ -76,7 +86,7 @@ private:
 		String string;
 	};
 	enum Type {FLASH, STRING};
-	uint8_t _type; // enum per-se is taking 8 bytes
+	uint8_t _type; // enum type is taking more memory
 
 
 public:
@@ -170,10 +180,6 @@ class AsyncWebHeader {
     AsyncWebHeader(const LightString& name, const LightString& value): _name(name), _value(value){}
     AsyncWebHeader(LightString&& name, LightString&& value): _name(std::move(name)), _value(std::move(value)){}
 
-#if 0
-    AsyncWebHeader(const String& name, const String& value): _name(name), _value(value){}
-    AsyncWebHeader(String&& name, String&& value): _name(name), _value(value){}
-#endif
 
     AsyncWebHeader(const String& data): _name(), _value(){
       if(!data) return;
@@ -515,11 +521,11 @@ public:
   using ConstIterator = headers_t::ConstIterator;
 
   void addHeader(const LightString& name, const LightString& value){
-	  Serial.println(__PRETTY_FUNCTION__);
+	 DBG_START_FUNCTION();
     _headers.add(new AsyncWebHeader(name, value));
   }  
   void addHeader(LightString&& name, LightString&& value){
-	  Serial.println(__PRETTY_FUNCTION__);
+	 DBG_START_FUNCTION();
     _headers.add(new AsyncWebHeader(std::move(name), std::move(value)));
   }
   

@@ -142,11 +142,11 @@ AsyncWebServerResponse::AsyncWebServerResponse()
   , _writtenLength(0)
   , _state(RESPONSE_SETUP)
 {
-	Serial.println(__PRETTY_FUNCTION__);
+  DBG_START_FUNCTION();
   for(auto header: DefaultHeaders::Instance()) {
     _headers.add(new AsyncWebHeader(header->name(), header->value()));
   }
-  Serial.printf("%s - end\n", __PRETTY_FUNCTION__);
+  DBG_END_FUNCTION();
 }
 
 AsyncWebServerResponse::~AsyncWebServerResponse(){
@@ -175,11 +175,11 @@ void AsyncWebServerResponse::setContentType(LightString&& type) {
 
 
 void AsyncWebServerResponse::addHeader(LightString&& name, LightString&& value){
-	Serial.println(__PRETTY_FUNCTION__);
+  DBG_START_FUNCTION();
   _headers.add(new AsyncWebHeader(std::move(name), std::move(value)));
 }
 void AsyncWebServerResponse::addHeader(const LightString& name, const LightString& value){
-	Serial.println(__PRETTY_FUNCTION__);
+  DBG_START_FUNCTION();
   _headers.add(new AsyncWebHeader(name, value));
 }
 
@@ -234,7 +234,7 @@ AsyncBasicResponse::AsyncBasicResponse(int code, const LightString& contentType,
 	: AsyncWebServerResponse(),
 	  _content(content)
 {
-  Serial.println(__PRETTY_FUNCTION__);
+  DBG_START_FUNCTION();
 
   setCode(code);
   _contentType = contentType;
@@ -247,7 +247,7 @@ AsyncBasicResponse::AsyncBasicResponse(int code, LightString&& contentType, Ligh
 : AsyncWebServerResponse(),
 	_content(std::move(content))
 {
-  Serial.println(__PRETTY_FUNCTION__);
+  DBG_START_FUNCTION();
 
   setCode(code);
   _contentType = std::move(contentType);
@@ -256,7 +256,7 @@ AsyncBasicResponse::AsyncBasicResponse(int code, LightString&& contentType, Ligh
 }
 
 void AsyncBasicResponse::init() {
-	Serial.println(__PRETTY_FUNCTION__);
+	DBG_START_FUNCTION();
 
 	if(!_content.isEmpty()){
 	    _contentLength = _content.length();
@@ -265,17 +265,16 @@ void AsyncBasicResponse::init() {
 	}
 	addHeader(F("Connection"), F("close"));
 
-	Serial.printf("%s - end\n", __PRETTY_FUNCTION__);
+	DBG_END_FUNCTION();
 }
 
 
 
 void AsyncBasicResponse::_respond(AsyncWebServerRequest *request){
-	Serial.println(__PRETTY_FUNCTION__);
+  DBG_START_FUNCTION();
 
   _state = RESPONSE_HEADERS;
   String out = _assembleHead(request->version());
-  Serial.printf("%s: p1\n", __PRETTY_FUNCTION__);
   size_t outLen = out.length();
   size_t space = request->client()->space();
 

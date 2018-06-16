@@ -722,15 +722,8 @@ void AsyncWebServerRequest::send(AsyncWebServerResponse *response){
   }
 }
 
-#if 0
-AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(int code, const LightString& contentType, const LightString& content){
-	Serial.println(__PRETTY_FUNCTION__);
-  return new AsyncBasicResponse(code, contentType, content);
-}
-#endif
-
 AsyncWebServerResponse * AsyncWebServerRequest::beginResponse(int code, LightString&& contentType, LightString&& content) {
-	Serial.println(__PRETTY_FUNCTION__);
+	DBG_START_FUNCTION();
 	return new AsyncBasicResponse(code, std::move(contentType), std::move(content));
 }
 
