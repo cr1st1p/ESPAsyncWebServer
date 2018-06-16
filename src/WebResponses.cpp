@@ -142,9 +142,11 @@ AsyncWebServerResponse::AsyncWebServerResponse()
   , _writtenLength(0)
   , _state(RESPONSE_SETUP)
 {
+	Serial.println(__PRETTY_FUNCTION__);
   for(auto header: DefaultHeaders::Instance()) {
     _headers.add(new AsyncWebHeader(header->name(), header->value()));
   }
+  Serial.printf("%s - end\n", __PRETTY_FUNCTION__);
 }
 
 AsyncWebServerResponse::~AsyncWebServerResponse(){
@@ -263,7 +265,7 @@ void AsyncBasicResponse::init() {
 	}
 	addHeader(F("Connection"), F("close"));
 
-	Serial.printf("%s - end", __PRETTY_FUNCTION__);
+	Serial.printf("%s - end\n", __PRETTY_FUNCTION__);
 }
 
 
