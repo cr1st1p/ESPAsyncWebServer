@@ -53,7 +53,6 @@ AsyncWebServer::AsyncWebServer(uint16_t port)
 
 AsyncWebServer::~AsyncWebServer(){
   reset();
-  delete _catchAllHandler;
 }
 
 AsyncWebRewrite& AsyncWebServer::addRewrite(AsyncWebRewrite* rewrite){
@@ -175,6 +174,7 @@ void AsyncWebServer::onRequestBody(ArBodyHandlerFunction fn){
   _catchAllHandler->onBody(fn);
 }
 
+// allow this to be called multiple times
 void AsyncWebServer::reset(){
   _rewrites.free();
   _handlers.free();
@@ -183,6 +183,8 @@ void AsyncWebServer::reset(){
     _catchAllHandler->onRequest(NULL);
     _catchAllHandler->onUpload(NULL);
     _catchAllHandler->onBody(NULL);
+    delete _catchAllHandler;
+    _catchAllHandler = NULL;
   }
 }
 
