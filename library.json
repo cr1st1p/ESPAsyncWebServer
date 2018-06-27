@@ -19,7 +19,8 @@
   "dependencies": [
     {
       "name": "ESPAsyncTCP",
-      "platforms": "espressif8266"
+      "platforms": "espressif8266",
+      "version": "https://github.com/me-no-dev/ESPAsyncTCP"
     },
     {
       "name": "AsyncTCP",
