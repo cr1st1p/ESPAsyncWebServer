@@ -207,7 +207,9 @@ bool LightString::isEmpty() const {
 	if (!flashString)
 		return true;
 	// we check first byte to see if it is a C string end terminator
-	return 0 == pgm_read_byte_inlined(flashString);
+	//return 0 == pgm_read_byte_inlined(flashString);
+	return 0 == pgm_read_byte(flashString);
+
 }
 
 
