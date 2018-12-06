@@ -422,7 +422,7 @@ size_t AsyncAbstractResponse::_ack(AsyncWebServerRequest *request, size_t len, u
     }
 
     uint8_t *buf = (uint8_t *)malloc(outLen+headLen);
-    DBG_AAR("s3", "outLen=%d headLen=%d, buf=%p\n",  outLen, headLen, buf);
+    DBG_AAR("s3", "_contentLength=%d _sentLength=%d outLen=%d headLen=%d, buf=%p\n",  _contentLength, _sentLength, outLen, headLen, buf);
     if (!buf) {
       DBG_AAR("s3", "OOPS. Out of memory?! Returning\n");
       return 0;
