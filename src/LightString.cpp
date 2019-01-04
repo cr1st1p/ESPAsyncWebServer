@@ -301,3 +301,10 @@ const char* LightString::c_str() {
 	changeToStringType(true);
 	return string.c_str();
 }
+
+bool LightString::operator!() const {
+	if (_type == STRING)
+		return !string;
+
+	return !flashString;
+}
